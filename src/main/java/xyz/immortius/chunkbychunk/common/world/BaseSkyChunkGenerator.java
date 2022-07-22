@@ -11,8 +11,7 @@ import net.minecraft.world.level.*;
 import net.minecraft.world.level.biome.*;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.levelgen.GenerationStep;
-import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.*;
 import net.minecraft.world.level.levelgen.blending.Blender;
 import net.minecraft.world.level.levelgen.feature.ConfiguredStructureFeature;
 import net.minecraft.world.level.levelgen.structure.StructureSet;
@@ -29,7 +28,7 @@ import java.util.stream.Stream;
  * parent generator is retained for biome information and similar. Each sky chunk generator also has a reference
  * to the dimension that generates chunks for this dimension
  */
-public abstract class BaseSkyChunkGenerator extends ChunkGenerator {
+public abstract class BaseSkyChunkGenerator extends NoiseBasedChunkGenerator {
 
     protected final ChunkGenerator parent;
     protected final ResourceKey<Level> generationLevel;
@@ -38,7 +37,7 @@ public abstract class BaseSkyChunkGenerator extends ChunkGenerator {
      * @param parent The chunkGenerator this generator is based on
      */
     public BaseSkyChunkGenerator(ChunkGenerator parent, ResourceKey<Level> generationLevel) {
-        super(CBCInteropMethods.getStructureSets(parent), CBCInteropMethods.getStructureOverrides(parent), parent.getBiomeSource());
+        super(CBCInteropMethods.getStructureSets(parent), CBCInteropMethods.getNoiseParamsRegistry(parent), parent.getBiomeSource(), 0L, CBCInteropMethods.getNoiseGeneratorSettings(parent));
         this.parent = parent;
         this.generationLevel = generationLevel;
     }
@@ -63,7 +62,6 @@ public abstract class BaseSkyChunkGenerator extends ChunkGenerator {
 
     @Override
     public void buildSurface(WorldGenRegion region, StructureFeatureManager structureFeatureManager, ChunkAccess chunk) {
-
     }
 
     @Override
@@ -118,7 +116,7 @@ public abstract class BaseSkyChunkGenerator extends ChunkGenerator {
 
     @Override
     public void applyBiomeDecoration(WorldGenLevel level, ChunkAccess chunk, StructureFeatureManager structureFeatureManager) {
-
+        parent.createReferences(level, structureFeatureManager, chunk);
     }
 
     @Override

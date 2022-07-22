@@ -6,7 +6,8 @@
   "mixins": [
     "EntityChangeDimensionMixin",
     "BucketFluidAccessor",
-    "ChunkGeneratorStructureAccessor"
+    "ChunkGeneratorStructureAccessor",
+    "NoiseBasedChunkGeneratorMixin"
   ],
   "client": [
   ],
