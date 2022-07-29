@@ -1,7 +1,9 @@
 package xyz.immortius.chunkbychunk.common.world;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelAccessor;
@@ -11,9 +13,11 @@ import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import xyz.immortius.chunkbychunk.config.ChunkByChunkConfig;
+import xyz.immortius.chunkbychunk.fabric.mixins.ChunkMapAccessor;
 import xyz.immortius.chunkbychunk.interop.CBCInteropMethods;
 import xyz.immortius.chunkbychunk.interop.ChunkByChunkConstants;
 
@@ -99,6 +103,11 @@ public final class SpawnChunkHelper {
         if (ChunkByChunkConfig.get().getGeneration().spawnNewChunkChest()) {
             createNextSpawner(targetLevel, targetChunkPos);
         }
+        final MutableObject<ClientboundLevelChunkWithLightPacket> mutableObject = new MutableObject<>();
+        for (ServerPlayer player : targetLevel.players()) {
+            ((ChunkMapAccessor) targetLevel.getChunkSource().chunkMap).invokeUpdateChunkTracking(player, targetChunkPos, mutableObject, false, true);
+        }
+
     }
 
     /**
@@ -137,7 +146,7 @@ public final class SpawnChunkHelper {
         for (int z = targetChunkPos.getMinBlockZ(); z <= targetChunkPos.getMaxBlockZ(); z++) {
             for (int x = targetChunkPos.getMinBlockX(); x <= targetChunkPos.getMaxBlockX(); x++) {
                 targetBlock.set(x, to.getMinBuildHeight(), z);
-                to.setBlock(targetBlock, Blocks.BEDROCK.defaultBlockState(), Block.UPDATE_ALL);
+                to.setBlock(targetBlock, Blocks.BEDROCK.defaultBlockState(), Block.UPDATE_NONE);
             }
         }
         for (int y = to.getMinBuildHeight() + 1; y < to.getMaxBuildHeight() - 1; y++) {
@@ -147,7 +156,7 @@ public final class SpawnChunkHelper {
                     targetBlock.set(x + xOffset, y, z + zOffset);
                     Block existingBlock = to.getBlockState(targetBlock).getBlock();
                     if (existingBlock instanceof LeavesBlock || existingBlock instanceof AirBlock || existingBlock instanceof LiquidBlock || existingBlock == Blocks.BEDROCK || existingBlock == Blocks.COBBLESTONE) {
-                        to.setBlock(targetBlock, from.getBlockState(sourceBlock), Block.UPDATE_ALL);
+                        to.setBlock(targetBlock, from.getBlockState(sourceBlock), Block.UPDATE_NONE);
                         BlockEntity fromBlockEntity = from.getBlockEntity(sourceBlock);
                         BlockEntity toBlockEntity = to.getBlockEntity(targetBlock);
                         if (fromBlockEntity != null && toBlockEntity != null) {

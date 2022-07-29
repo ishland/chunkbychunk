@@ -4,9 +4,10 @@
   "package": "xyz.immortius.chunkbychunk.fabric.mixins",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "EntityChangeDimensionMixin",
     "BucketFluidAccessor",
     "ChunkGeneratorStructureAccessor",
+    "ChunkMapAccessor",
+    "EntityChangeDimensionMixin",
     "NoiseBasedChunkGeneratorMixin"
   ],
   "client": [
