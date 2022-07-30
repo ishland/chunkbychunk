@@ -184,10 +184,10 @@ public class WorldForgeBlockEntity extends BaseFueledBlockEntity {
 
     @Override
     public int[] getSlotsForFace(Direction direction) {
-        if (direction == Direction.UP) {
-            return SLOTS_FOR_UP;
+        if (direction == Direction.DOWN) {
+            return SLOTS_FOR_DOWN;
         }
-        return SLOTS_FOR_DOWN;
+        return SLOTS_FOR_UP;
     }
 
     @Override
