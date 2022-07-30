@@ -54,7 +54,7 @@ public class WorldForgeGuiPoly implements GuiPoly {
             this.addSlot(new StaticSlot(new ItemStack(Items.BLACK_STAINED_GLASS_PANE)));
             this.addSlot(originalSlots.get(0));
             this.addSlot(new NotVeryStaticSlot(() -> {
-                final double progress = menu.getProgress() / (double) menu.getGoal();
+                final double progress = Math.min(1, Math.max(menu.getProgress() / (double) menu.getGoal(), 0));
                 return new ItemStack(getProgress(progress))
                         .setHoverName(new TextComponent("Progress: %.1f%%".formatted(progress * 100.0)));
             }));
