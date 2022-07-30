@@ -143,6 +143,11 @@ public class ChunkByChunkMod implements ModInitializer {
             return InteractionResult.PASS;
         });
 
+        ServerPlayNetworking.registerGlobalReceiver(CONFIG_PACKET, (server, player, handler, buf, responseSender) -> {
+            LOGGER.info("Player {} joined with chunkbychunk installed on client", player.getName().getString());
+            ((IServerPlayer) player).cbc$setClientInstalled(true);
+        });
+
         setupConfig();
     }
 

@@ -8,6 +8,7 @@
     "ChunkGeneratorStructureAccessor",
     "ChunkMapAccessor",
     "EntityChangeDimensionMixin",
+    "MixinServerPlayer",
     "NoiseBasedChunkGeneratorMixin"
   ],
   "client": [

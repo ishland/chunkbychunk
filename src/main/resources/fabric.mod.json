@@ -24,7 +24,8 @@
     "client": [
       "xyz.immortius.chunkbychunk.fabric.ChunkByChunkClientMod"
     ],
-    "modmenu": [ "xyz.immortius.chunkbychunk.fabric.ModMenuApiImpl" ]
+    "modmenu": [ "xyz.immortius.chunkbychunk.fabric.ModMenuApiImpl" ],
+    "polymc": [ "xyz.immortius.chunkbychunk.fabric.polymc.PolyMcEntrypoint" ]
   },
   "mixins": [
     "chunkbychunk.mixins.json"
