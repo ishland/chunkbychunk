@@ -49,7 +49,7 @@ public class NetherChunkByChunkGenerator extends BaseSkyChunkGenerator {
             for (blockPos.setZ(0); blockPos.getZ() < 16; blockPos.setZ(blockPos.getZ() + 1)) {
                 for (blockPos.setX(0); blockPos.getX() < 16; blockPos.setX(blockPos.getX() + 1)) {
                     blockPos.setY(chunkAccess.getMinBuildHeight());
-                    chunkAccess.setBlockState(blockPos, Blocks.BEDROCK.defaultBlockState(), false);
+                    chunkAccess.setBlockState(blockPos, Blocks.BARRIER.defaultBlockState(), false);
                     blockPos.setY(chunkAccess.getMinBuildHeight() + 1);
                     chunkAccess.setBlockState(blockPos, Blocks.LAVA.defaultBlockState(), false);
                     blockPos.setY(127);

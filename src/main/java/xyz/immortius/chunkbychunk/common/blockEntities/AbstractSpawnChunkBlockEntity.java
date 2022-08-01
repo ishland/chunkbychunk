@@ -22,7 +22,7 @@ import java.util.function.Function;
 public abstract class AbstractSpawnChunkBlockEntity extends BlockEntity {
 
     private static final int TICKS_TO_SPAWN_CHUNK = 1;
-    private static final int TICKS_TO_SPAWN_NETHER_CHUNK = 2;
+//    private static final int TICKS_TO_SPAWN_NETHER_CHUNK = 2;
     private static final int TICKS_TO_SPAWN_ENTITIES = 20;
 
     private final Function<BlockPos, ChunkPos> sourceChunkPosFunc;
@@ -45,17 +45,17 @@ public abstract class AbstractSpawnChunkBlockEntity extends BlockEntity {
             if (SpawnChunkHelper.isValidForChunkSpawn(serverLevel) && SpawnChunkHelper.isEmptyChunk(serverLevel, targetChunkPos)) {
                 SpawnChunkHelper.spawnChunkBlocks(serverLevel, entity.sourceChunkPosFunc.apply(blockPos), targetChunkPos);
             }
-        } else if (entity.tickCounter == TICKS_TO_SPAWN_NETHER_CHUNK && ChunkByChunkConfig.get().getGeneration().isSynchNether() && Level.OVERWORLD.equals(serverLevel.dimension())) {
-            ServerLevel netherLevel = serverLevel.getServer().getLevel(Level.NETHER);
-            double teleportationScale = DimensionType.getTeleportationScale(serverLevel.dimensionType(), netherLevel.dimensionType());
-            BlockPos pos = targetChunkPos.getMiddleBlockPosition(0);
-
-            ChunkPos netherChunkPos = new ChunkPos(new BlockPos(pos.getX() * teleportationScale, 0, pos.getZ() * teleportationScale));
-            if (SpawnChunkHelper.isEmptyChunk(netherLevel, netherChunkPos)) {
-                SpawnChunkHelper.spawnChunkBlocks(netherLevel, netherChunkPos, netherChunkPos);
-                BlockPos genBlockPos = netherChunkPos.getMiddleBlockPosition(netherLevel.getMaxBuildHeight() - 1);
-                netherLevel.setBlock(genBlockPos, ChunkByChunkConstants.triggeredSpawnChunkBlock().defaultBlockState(), Block.UPDATE_ALL);
-            }
+//        } else if (entity.tickCounter == TICKS_TO_SPAWN_NETHER_CHUNK && ChunkByChunkConfig.get().getGeneration().isSynchNether() && Level.OVERWORLD.equals(serverLevel.dimension())) {
+//            ServerLevel netherLevel = serverLevel.getServer().getLevel(Level.NETHER);
+//            double teleportationScale = DimensionType.getTeleportationScale(serverLevel.dimensionType(), netherLevel.dimensionType());
+//            BlockPos pos = targetChunkPos.getMiddleBlockPosition(0);
+//
+//            ChunkPos netherChunkPos = new ChunkPos(new BlockPos(pos.getX() * teleportationScale, 0, pos.getZ() * teleportationScale));
+//            if (SpawnChunkHelper.isEmptyChunk(netherLevel, netherChunkPos)) {
+//                SpawnChunkHelper.spawnChunkBlocks(netherLevel, netherChunkPos, netherChunkPos);
+//                BlockPos genBlockPos = netherChunkPos.getMiddleBlockPosition(netherLevel.getMaxBuildHeight() - 1);
+//                netherLevel.setBlock(genBlockPos, ChunkByChunkConstants.triggeredSpawnChunkBlock().defaultBlockState(), Block.UPDATE_ALL);
+//            }
         } else if (entity.tickCounter >= TICKS_TO_SPAWN_ENTITIES) {
             if (SpawnChunkHelper.isValidForChunkSpawn(serverLevel)) {
                 SpawnChunkHelper.spawnChunkEntities(serverLevel, entity.sourceChunkPosFunc.apply(blockPos), targetChunkPos);

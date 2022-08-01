@@ -44,7 +44,7 @@ public abstract class BaseSpawnChunkBlock extends Block {
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        if (Level.OVERWORLD.equals(context.getLevel().dimension())) {
+        if (Level.OVERWORLD.equals(context.getLevel().dimension()) || Level.NETHER.equals(context.getLevel().dimension())) {
             return super.getStateForPlacement(context);
         }
         return null;
@@ -56,7 +56,7 @@ public abstract class BaseSpawnChunkBlock extends Block {
             return InteractionResult.SUCCESS;
         }
         if (level instanceof ServerLevel serverLevel) {
-            if (Level.OVERWORLD.equals(level.dimension())) {
+            if (Level.OVERWORLD.equals(level.dimension()) || Level.NETHER.equals(level.dimension())) {
                 List<BlockPos> targetPositions = new ArrayList<>();
                 BlockPos initialPos = pos.atY(level.getMaxBuildHeight() - 1);
                 targetPositions.add(initialPos);
