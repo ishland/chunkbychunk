@@ -136,12 +136,12 @@ public abstract class BaseSkyChunkGenerator extends NoiseBasedChunkGenerator {
 
     @Override
     public void createStructures(RegistryAccess registryAccess, StructureFeatureManager structureFeatureManager, ChunkAccess chunk, StructureManager structureManager, long seed) {
-
+        parent.createStructures(registryAccess, structureFeatureManager, chunk, structureManager, seed);
     }
 
     @Override
     public void createReferences(WorldGenLevel level, StructureFeatureManager structureFeatureManager, ChunkAccess chunk) {
-
+        parent.createReferences(level, structureFeatureManager, chunk);
     }
 
     @Override

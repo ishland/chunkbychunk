@@ -7,7 +7,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.AirBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.chunk.ChunkAccess;
@@ -102,10 +106,6 @@ public final class SpawnChunkHelper {
             return;
         }
         copyBlocks(sourceLevel, sourceChunkPos, targetLevel, targetChunkPos);
-        final ChunkAccess sourceLevelChunk = sourceLevel.getChunk(sourceChunkPos.x, sourceChunkPos.z, ChunkStatus.STRUCTURE_REFERENCES);
-        final ChunkAccess targetLevelChunk = targetLevel.getChunk(targetChunkPos.x, targetChunkPos.z, ChunkStatus.STRUCTURE_REFERENCES);
-        targetLevelChunk.setAllStarts(sourceLevelChunk.getAllStarts());
-        targetLevelChunk.setAllReferences(sourceLevelChunk.getAllReferences());
         if (ChunkByChunkConfig.get().getGeneration().spawnNewChunkChest()) {
             createNextSpawner(targetLevel, targetChunkPos);
         }
