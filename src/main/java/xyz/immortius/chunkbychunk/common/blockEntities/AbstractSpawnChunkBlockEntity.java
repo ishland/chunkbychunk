@@ -23,7 +23,7 @@ public abstract class AbstractSpawnChunkBlockEntity extends BlockEntity {
 
     private static final int TICKS_TO_SPAWN_CHUNK = 1;
 //    private static final int TICKS_TO_SPAWN_NETHER_CHUNK = 2;
-    private static final int TICKS_TO_SPAWN_ENTITIES = 20;
+    private static final int TICKS_TO_SPAWN_ENTITIES = 2;
 
     private final Function<BlockPos, ChunkPos> sourceChunkPosFunc;
     private int tickCounter = 0;

@@ -1,10 +1,20 @@
 package xyz.immortius.chunkbychunk.common.world;
 
+import com.mojang.datafixers.util.Either;
+import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
+import net.minecraft.server.TickTask;
+import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.TicketType;
+import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.village.poi.PoiManager;
+import net.minecraft.world.entity.ai.village.poi.PoiRecord;
+import net.minecraft.world.entity.ai.village.poi.PoiSection;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.AirBlock;
@@ -15,21 +25,29 @@ import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.ChunkStatus;
-import net.minecraft.world.level.portal.PortalInfo;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import xyz.immortius.chunkbychunk.config.ChunkByChunkConfig;
 import xyz.immortius.chunkbychunk.fabric.mixins.ChunkMapAccessor;
-import xyz.immortius.chunkbychunk.interop.CBCInteropMethods;
+import xyz.immortius.chunkbychunk.fabric.mixins.PoiSectionAccessor;
+import xyz.immortius.chunkbychunk.fabric.mixins.SectionStorageAccessor;
+import xyz.immortius.chunkbychunk.fabric.mixins.ServerChunkCacheAccessor;
+import xyz.immortius.chunkbychunk.fabric.mixins.ServerLevelAccessor;
 import xyz.immortius.chunkbychunk.interop.ChunkByChunkConstants;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * Helper class for spawning a chunk. Spawning is done by copying a chunk from SkyChunkGeneration level
@@ -95,6 +113,7 @@ public final class SpawnChunkHelper {
 
     /**
      * Spawns the blocks for a chunk.
+     *
      * @param targetLevel    The level to spawn the chunk in
      * @param targetChunkPos The position of the chunk in the target dimension to spawn
      * @param sourceLevel    The level to spawn the chunk from
@@ -105,15 +124,92 @@ public final class SpawnChunkHelper {
             LOGGER.warn("Attempted to spawn a chunk in a non-SkyChunk world");
             return;
         }
+        preloadChunk(sourceLevel, sourceChunkPos);
+
         copyBlocks(sourceLevel, sourceChunkPos, targetLevel, targetChunkPos);
+        copyPois(targetLevel, targetChunkPos, sourceLevel, sourceChunkPos);
+
         if (ChunkByChunkConfig.get().getGeneration().spawnNewChunkChest()) {
             createNextSpawner(targetLevel, targetChunkPos);
         }
+
         final MutableObject<ClientboundLevelChunkWithLightPacket> mutableObject = new MutableObject<>();
         for (ServerPlayer player : targetLevel.players()) {
             ((ChunkMapAccessor) targetLevel.getChunkSource().chunkMap).invokeUpdateChunkTracking(player, targetChunkPos, mutableObject, false, true);
         }
 
+//        for (ChunkPos pos : ChunkPos.rangeClosed(targetChunkPos, 3)
+//                .sorted(Comparator.comparingInt(pos -> -pos.getChessboardDistance(targetChunkPos)))
+//                .toList()) {
+//            ChunkStatus until = ChunkStatus.getStatusAroundFullChunk(pos.getChessboardDistance(targetChunkPos));
+//            if (until == ChunkStatus.FULL) until = ChunkStatus.HEIGHTMAPS;
+//            runGenUntil(targetLevel, sourceLevel, getChunks(targetLevel, pos), until);
+//        }
+
+//        runGenUntil(targetLevel, sourceLevel.getChunkSource().getGenerator(), getChunks(targetLevel, targetChunkPos), ChunkStatus.HEIGHTMAPS);
+
+    }
+
+//    private static void runGenUntil(ServerLevel targetLevel, ChunkGenerator generator, List<ChunkAccess> chunks, ChunkStatus until) {
+//        for (ChunkStatus status : List.of(
+//                ChunkStatus.STRUCTURE_REFERENCES,
+//                ChunkStatus.BIOMES,
+//                ChunkStatus.NOISE,
+//                ChunkStatus.SURFACE,
+//                ChunkStatus.CARVERS,
+//                ChunkStatus.LIQUID_CARVERS,
+//                ChunkStatus.FEATURES,
+//                ChunkStatus.LIGHT,
+//                ChunkStatus.SPAWN,
+//                ChunkStatus.HEIGHTMAPS
+//        )) {
+//            final CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>> future = status.generate(
+//                    Util.backgroundExecutor(),
+//                    targetLevel,
+//                    generator,
+//                    targetLevel.getStructureManager(),
+//                    targetLevel.getChunkSource().getLightEngine(),
+//                    chunkAccess -> {
+//                        throw new IllegalArgumentException("Not creating full chunk here");
+//                    },
+//                    chunks,
+//                    true
+//            );
+//            ((ServerChunkCacheAccessor) targetLevel.getChunkSource()).getMainThreadProcessor().managedBlock(future::isDone);
+//            final MutableObject<ClientboundLevelChunkWithLightPacket> mutableObject = new MutableObject<>();
+//            for (ServerPlayer player : targetLevel.players()) {
+//                ((ChunkMapAccessor) targetLevel.getChunkSource().chunkMap).invokeUpdateChunkTracking(player, chunks.get(chunks.size() / 2).getPos(), mutableObject, false, true);
+//            }
+//            if (status == until) {
+//                break;
+//            }
+//        }
+//    }
+//
+//    @NotNull
+//    private static List<ChunkAccess> getChunks(ServerLevel targetLevel, ChunkPos targetChunkPos) {
+//        List<ChunkAccess> chunks = new ArrayList<>(17 * 17);
+//        for (int x = targetChunkPos.x - 8; x <= targetChunkPos.x + 8; x ++) {
+//            for (int z = targetChunkPos.z - 8; z <= targetChunkPos.z + 8; z ++) {
+//                chunks.add(new WrappingImposterProtoChunk(targetLevel.getChunk(x, z), ChunkStatus.STRUCTURE_STARTS));
+//            }
+//        }
+//        return chunks;
+//    }
+
+    private static void copyPois(ServerLevel targetLevel, ChunkPos targetChunkPos, ServerLevel sourceLevel, ChunkPos sourceChunkPos) {
+        sourceLevel.getPoiManager().getInChunk(poiType -> true, sourceChunkPos, PoiManager.Occupancy.ANY)
+                .forEach(poiRecord -> {
+                    final PoiSection targetPoiSection = ((SectionStorageAccessor<PoiSection>) targetLevel.getPoiManager())
+                            .invokeGetOrCreate(SectionPos.asLong(targetChunkPos.x, SectionPos.blockToSectionCoord(poiRecord.getPos().getY()), targetChunkPos.z));
+                    ((PoiSectionAccessor) targetPoiSection)
+                            .invokeAdd(new PoiRecord(
+                                    targetChunkPos.getBlockAt(poiRecord.getPos().getX() & 0b1111, poiRecord.getPos().getY() & 0b1111, poiRecord.getPos().getZ() & 0b1111),
+                                    poiRecord.getPoiType(),
+                                    poiRecord.getFreeTickets(),
+                                    ((PoiSectionAccessor) targetPoiSection).getSetDirty()
+                            ));
+                });
     }
 
     /**
@@ -152,7 +248,7 @@ public final class SpawnChunkHelper {
         for (int z = targetChunkPos.getMinBlockZ(); z <= targetChunkPos.getMaxBlockZ(); z++) {
             for (int x = targetChunkPos.getMinBlockX(); x <= targetChunkPos.getMaxBlockX(); x++) {
                 targetBlock.set(x, to.getMinBuildHeight(), z);
-                to.setBlock(targetBlock, Blocks.BEDROCK.defaultBlockState(), Block.UPDATE_NONE);
+                to.setBlock(targetBlock, Blocks.BEDROCK.defaultBlockState(), Block.UPDATE_NONE, 0);
             }
         }
         for (int y = to.getMinBuildHeight() + 1; y < to.getMaxBuildHeight() - 1; y++) {
@@ -162,7 +258,7 @@ public final class SpawnChunkHelper {
                     targetBlock.set(x + xOffset, y, z + zOffset);
                     Block existingBlock = to.getBlockState(targetBlock).getBlock();
                     if (existingBlock instanceof LeavesBlock || existingBlock instanceof AirBlock || existingBlock instanceof LiquidBlock || existingBlock == Blocks.BEDROCK || existingBlock == Blocks.COBBLESTONE) {
-                        to.setBlock(targetBlock, from.getBlockState(sourceBlock), Block.UPDATE_NONE);
+                        to.setBlock(targetBlock, from.getBlockState(sourceBlock), Block.UPDATE_NONE, 0);
                         BlockEntity fromBlockEntity = from.getBlockEntity(sourceBlock);
                         BlockEntity toBlockEntity = to.getBlockEntity(targetBlock);
                         if (fromBlockEntity != null && toBlockEntity != null) {
@@ -183,15 +279,41 @@ public final class SpawnChunkHelper {
      * @param targetChunkPos The chunk to teleport entities to
      */
     public static void copyEntities(ServerLevel from, ChunkPos sourceChunkPos, ServerLevel to, ChunkPos targetChunkPos) {
-        List<Entity> entities = from.getEntities((Entity) null, new AABB(sourceChunkPos.getMinBlockX(), from.getMinBuildHeight(), sourceChunkPos.getMinBlockZ(), sourceChunkPos.getMaxBlockX(), from.getMaxBuildHeight(), sourceChunkPos.getMaxBlockZ()), (x) -> true);
-        for (Entity e : entities) {
-            Vec3 pos = new Vec3(e.getX() + (targetChunkPos.x - sourceChunkPos.x) * 16, e.getY(), e.getZ() + (targetChunkPos.z - sourceChunkPos.z) * 16);
+        from.getServer().tell(new TickTask(0, () -> {
+            preloadChunk(from, sourceChunkPos);
 
-            Entity movedEntity = CBCInteropMethods.changeDimension(e, to, new PortalInfo(pos, Vec3.ZERO, e.xRotO, e.yRotO));
-            if (movedEntity != null) {
-                movedEntity.setPos(pos);
+            while (!((ServerLevelAccessor) from).getEntityManager().areEntitiesLoaded(sourceChunkPos.toLong())) {
+                boolean hasTask = false;
+                if (((BlockableEventLoop<Runnable>) ((ServerChunkCacheAccessor) from.getChunkSource()).getMainThreadProcessor()).pollTask()) hasTask = true;
+                if (!hasTask) {
+                    from.getServer().tell(new TickTask(0, () -> copyEntities(from, sourceChunkPos, to, targetChunkPos)));
+                    return;
+                }
             }
+
+            List<Entity> entities = from.getEntities((Entity) null, new AABB(sourceChunkPos.getMinBlockX(), from.getMinBuildHeight(), sourceChunkPos.getMinBlockZ(), sourceChunkPos.getMaxBlockX(), from.getMaxBuildHeight(), sourceChunkPos.getMaxBlockZ()), (x) -> true);
+            for (Entity e : entities) {
+                Vec3 pos = new Vec3(e.getX() + (targetChunkPos.x - sourceChunkPos.x) * 16, e.getY(), e.getZ() + (targetChunkPos.z - sourceChunkPos.z) * 16);
+
+                Entity movedEntity = e.getType().create(to);
+                if (movedEntity != null) {
+                    movedEntity.restoreFrom(e);
+                    movedEntity.setPos(pos);
+                    to.addDuringTeleport(movedEntity);
+                }
+            }
+            System.out.println("Added %d entities for chunk %s".formatted(entities.size(), targetChunkPos));
+        }));
+    }
+
+    private static void preloadChunk(ServerLevel level, ChunkPos pos) {
+        level.getChunkSource().addRegionTicket(TicketType.UNKNOWN, pos, 4, pos);
+        ((ServerChunkCacheAccessor) level.getChunkSource()).invokeRunDistanceManagerUpdates();
+        final ChunkHolder chunkHolder = ((ChunkMapAccessor) level.getChunkSource().chunkMap).invokeGetUpdatingChunkIfPresent(pos.toLong());
+        if (chunkHolder == null) {
+            throw new RuntimeException("Chunk not there when requested");
         }
+        ((ServerChunkCacheAccessor) level.getChunkSource()).getMainThreadProcessor().managedBlock(chunkHolder.getEntityTickingChunkFuture()::isDone);
     }
 
     /**
@@ -202,7 +324,8 @@ public final class SpawnChunkHelper {
      */
     private static void createNextSpawner(ServerLevel targetLevel, ChunkPos chunkPos) {
         int minPos = Math.min(ChunkByChunkConfig.get().getGeneration().getMinChestSpawnDepth(), ChunkByChunkConfig.get().getGeneration().getMaxChestSpawnDepth());
-        int maxPos = Math.max(ChunkByChunkConfig.get().getGeneration().getMinChestSpawnDepth(), ChunkByChunkConfig.get().getGeneration().getMaxChestSpawnDepth());;
+        int maxPos = Math.max(ChunkByChunkConfig.get().getGeneration().getMinChestSpawnDepth(), ChunkByChunkConfig.get().getGeneration().getMaxChestSpawnDepth());
+        ;
         while (maxPos > minPos && (targetLevel.getBlockState(new BlockPos(chunkPos.getMiddleBlockX(), maxPos, chunkPos.getMiddleBlockZ())).getBlock() instanceof AirBlock)) {
             maxPos--;
         }

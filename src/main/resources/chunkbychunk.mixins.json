@@ -8,8 +8,13 @@
     "ChunkGeneratorStructureAccessor",
     "ChunkMapAccessor",
     "EntityChangeDimensionMixin",
+    "MixinServerLevel",
     "MixinServerPlayer",
-    "NoiseBasedChunkGeneratorMixin"
+    "NoiseBasedChunkGeneratorMixin",
+    "PoiSectionAccessor",
+    "SectionStorageAccessor",
+    "ServerChunkCacheAccessor",
+    "ServerLevelAccessor"
   ],
   "client": [
   ],
